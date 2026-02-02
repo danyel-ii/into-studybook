@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "apps/web",
+      "src": "apps/web/package.json",
       "use": "@vercel/next"
     },
     {
@@ -16,8 +16,7 @@
       "dest": "apps/api/app/main.py"
     },
     {
-      "src": "/(.*)",
-      "dest": "apps/web/$1"
+      "handle": "filesystem"
     }
   ]
 }
