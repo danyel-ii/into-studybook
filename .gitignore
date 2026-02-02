@@ -1,0 +1,28 @@
+# Secrets
+.env
+.env.*
+
+# Python
+.venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite
+*.db
+
+# Node / Next
+node_modules/
+.next/
+.out/
+
+# OS
+.DS_Store
+
+# Project artifacts
+projects/
+cache/
+
+# Logs
+*.log
