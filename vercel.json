@@ -10,10 +10,17 @@
       "use": "@vercel/python"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "/apps/api/app/main/:path*"
+      "src": "/api/(.*)",
+      "dest": "/apps/api/app/main.py"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/apps/web/$1"
     }
   ]
 }
