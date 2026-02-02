@@ -4,9 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import clsx from "clsx";
 
-const API =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api");
+const API_ENV = process.env.NEXT_PUBLIC_API_URL;
+const API = API_ENV && !API_ENV.includes("localhost")
+  ? API_ENV
+  : process.env.NODE_ENV === "development"
+    ? "http://localhost:8000"
+    : "/api";
 
 type Project = {
   id: string;
