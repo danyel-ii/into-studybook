@@ -410,6 +410,105 @@ class MockPipeline:
         )
 
 
+class DirectPipeline:
+    def __init__(self, llm: LLMClient) -> None:
+        self.llm = llm
+
+    def generate_tags(self, context: str) -> PipelineResult:
+        prompt = f"{TAGS_CRITERIA}
+Return JSON matching the TagsPayload schema."
+        tags = self.llm.complete_json(TagsPayload, prompt, context)
+        return PipelineResult(
+            output=tags.model_dump_json(),
+            prompt=prompt,
+            meta={"pipeline": "direct", "criteria": TAGS_CRITERIA},
+        )
+
+    def generate_syllabus(
+        self,
+        context: str,
+        tags: dict,
+        tag_weights: list[TagWeight],
+        lecture_count: int,
+    ) -> PipelineResult:
+        tags_json = json.dumps(tags, ensure_ascii=True)
+        weights_json = json.dumps([tw.model_dump() for tw in tag_weights], ensure_ascii=True)
+        prompt = (
+            f"{SYLLABUS_CRITERIA} "
+            f"Generate exactly {lecture_count} lectures. "
+            "Return JSON matching the SyllabusPayload schema."
+        )
+        syllabus_context = (
+            f"Tags JSON:
+{tags_json}
+
+"
+            f"Tag weights JSON:
+{weights_json}
+
+"
+            f"Context:
+{context}"
+        )
+        syllabus = self.llm.complete_json(SyllabusPayload, prompt, syllabus_context)
+        return PipelineResult(
+            output=syllabus.model_dump_json(),
+            prompt=prompt,
+            meta={"pipeline": "direct", "criteria": SYLLABUS_CRITERIA},
+        )
+
+    def generate_lecture(self, lecture: dict, context: str) -> PipelineResult:
+        if settings.test_mode:
+            settings.lecture_min_words = settings.test_lecture_min_words
+            settings.lecture_max_words = settings.test_lecture_max_words
+            settings.lecture_target_words = settings.test_lecture_target_words
+            settings.lecture_word_tolerance = settings.test_lecture_word_tolerance
+            settings.lecture_chunk_parts = settings.test_lecture_chunk_parts
+            settings.lecture_chunk_overhead_words = settings.test_lecture_chunk_overhead_words
+
+        prompt = f"{LECTURE_CRITERIA}
+{LECTURE_STRUCTURE}"
+        if settings.lecture_chunked_enabled:
+            markdown = _generate_chunked_lecture(self.llm, lecture, context)
+        else:
+            markdown = _safe_complete_markdown(self.llm, prompt, context) or ""
+        markdown = _ensure_lecture_structure(markdown, lecture.get("title", "Lecture"))
+
+        # Lightweight repair loop
+        for _ in range(max(1, settings.lecture_max_expansion_rounds)):
+            issues = _validate_lecture(markdown)
+            if not issues:
+                break
+            word_count = _word_count(markdown)
+            length_note = _length_instruction(word_count)
+            critique = " ".join(issues + ([length_note] if length_note else []))
+            revise_prompt = (
+                f"{LECTURE_CRITERIA}
+{LECTURE_STRUCTURE}
+"
+                f"Revise the lecture to fix: {critique}"
+            )
+            revised = _safe_complete_markdown(self.llm, revise_prompt, context)
+            if revised:
+                markdown = _ensure_lecture_structure(revised, lecture.get("title", "Lecture"))
+
+        return PipelineResult(
+            output=markdown,
+            prompt=prompt,
+            meta={"pipeline": "direct", "criteria": LECTURE_CRITERIA, "structure": LECTURE_STRUCTURE},
+        )
+
+    def generate_essay(self, topic: str, context: str) -> PipelineResult:
+        prompt = f"{ESSAY_CRITERIA}
+Write the essay now."
+        markdown = _safe_complete_markdown(self.llm, prompt, context) or ""
+        return PipelineResult(
+            output=markdown,
+            prompt=prompt,
+            meta={"pipeline": "direct", "criteria": ESSAY_CRITERIA},
+        )
+
+
 class DSPyPipeline:
     def __init__(self, llm: LLMClient) -> None:
         import dspy  # type: ignore
@@ -823,9 +922,14 @@ class DSPyPipeline:
         )
 
 
-def get_generation_pipeline(llm: LLMClient) -> MockPipeline | DSPyPipeline:
-    if not settings.dspy_enabled or llm.name == "mock":
+def get_generation_pipeline(llm: LLMClient) -> MockPipeline | DirectPipeline | DSPyPipeline:
+    if llm.name == "mock":
         if not isinstance(llm, MockLLMClient):
             llm = MockLLMClient()
         return MockPipeline(llm)
-    return DSPyPipeline(llm)
+    if not settings.dspy_enabled:
+        return DirectPipeline(llm)
+    try:
+        return DSPyPipeline(llm)
+    except Exception:
+        return DirectPipeline(llm)

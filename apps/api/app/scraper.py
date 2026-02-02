@@ -14,6 +14,21 @@ import httpx
 from bs4 import BeautifulSoup
 
 from .config import settings
+
+try:
+    import lxml  # type: ignore
+
+    HAS_LXML = True
+except Exception:  # pragma: no cover - optional dependency
+    HAS_LXML = False
+
+
+def _html_parser() -> str:
+    return "lxml" if HAS_LXML else "html.parser"
+
+
+def _xml_parser() -> str:
+    return "xml" if HAS_LXML else "html.parser"
 from .schemas import Source
 from .storage import append_jsonl, atomic_write_json, project_dir, read_json
 
@@ -93,7 +108,7 @@ def _link_ok(url: str, source: Source) -> bool:
 
 
 def _extract_links(html: str, base_url: str) -> list[str]:
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(html, _html_parser())
     links = []
     for tag in soup.find_all("a", href=True):
         href = tag.get("href")
@@ -117,7 +132,7 @@ def _within_path(base: str, target: str) -> bool:
 
 
 def _parse_sitemap(xml_text: str) -> list[str]:
-    soup = BeautifulSoup(xml_text, "xml")
+    soup = BeautifulSoup(xml_text, _xml_parser())
     urls = [loc.text for loc in soup.find_all("loc") if loc.text]
     return urls
 
@@ -135,7 +150,7 @@ def extract_content(html: str, url: str) -> dict[str, Any]:
                 }
         except Exception:
             pass
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(html, _html_parser())
     title = soup.title.text.strip() if soup.title and soup.title.text else ""
     for script in soup(["script", "style", "noscript"]):
         script.decompose()
