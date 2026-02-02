@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
+import os
 
 from pydantic_settings import BaseSettings
 
@@ -9,10 +10,17 @@ from pydantic_settings import BaseSettings
 ROOT_DIR = Path(__file__).resolve().parents[3]
 
 
+
+def _default_projects_dir() -> Path:
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        return Path("/tmp/selfstudy/projects")
+    return ROOT_DIR / "projects"
+
+
 class Settings(BaseSettings):
     app_name: str = "EthEd Notebook Builder API"
-    projects_dir: Path = ROOT_DIR / "projects"
-    db_path: Path = projects_dir / "metadata.db"
+    projects_dir: Path = _default_projects_dir()
+    db_path: Optional[Path] = None
 
     allow_robots_default: bool = True
     requests_per_host: float = 1.0
@@ -64,8 +72,18 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-settings.projects_dir.mkdir(parents=True, exist_ok=True)
-settings.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+if settings.db_path is None:
+    settings.db_path = settings.projects_dir / "metadata.db"
+
+try:
+    settings.projects_dir.mkdir(parents=True, exist_ok=True)
+    settings.db_path.parent.mkdir(parents=True, exist_ok=True)
+except OSError:
+    settings.projects_dir = Path("/tmp/selfstudy/projects")
+    settings.db_path = settings.projects_dir / "metadata.db"
+    settings.projects_dir.mkdir(parents=True, exist_ok=True)
+    settings.db_path.parent.mkdir(parents=True, exist_ok=True)
 
 if settings.environment.lower().strip() in {"production", "prod"}:
     settings.allow_mock_fallback = False
