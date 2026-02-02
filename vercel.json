@@ -22,5 +22,10 @@
       "src": "/(.*)",
       "dest": "/apps/web/$1"
     }
-  ]
+  ],
+  "functions": {
+    "apps/api/app/main.py": {
+      "excludeFiles": "{projects,outputs,runs,cache,docs,tests,.pytest_cache,.venv,**/*.md,**/*.pdf}/**"
+    }
+  }
 }
