@@ -20,3 +20,10 @@ def init_db() -> None:
 def get_session() -> Session:
     with Session(engine) as session:
         yield session
+
+# Ensure DB exists even when startup hooks are skipped in serverless runtimes.
+try:
+    init_db()  # ensure db exists on import
+except Exception as exc:  # pragma: no cover - best effort in serverless
+    print(f"DB init failed: {exc}")
+
