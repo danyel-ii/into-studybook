@@ -415,8 +415,7 @@ class DirectPipeline:
         self.llm = llm
 
     def generate_tags(self, context: str) -> PipelineResult:
-        prompt = f"{TAGS_CRITERIA}
-Return JSON matching the TagsPayload schema."
+        prompt = f"{TAGS_CRITERIA}\nReturn JSON matching the TagsPayload schema."
         tags = self.llm.complete_json(TagsPayload, prompt, context)
         return PipelineResult(
             output=tags.model_dump_json(),
