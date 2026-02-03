@@ -732,12 +732,18 @@ export default function Page() {
       });
     }
     if (scrapeSummary) {
-      const words =
-        typeof scrapeSummary.words === "number" ? scrapeSummary.words : 0;
+      const ok = typeof scrapeSummary.ok === "number" ? scrapeSummary.ok : 0;
+      const failed = typeof scrapeSummary.failed === "number" ? scrapeSummary.failed : 0;
+      const skipped = typeof scrapeSummary.skipped === "number" ? scrapeSummary.skipped : 0;
+      const words = typeof scrapeSummary.words === "number" ? scrapeSummary.words : 0;
+      const discovered =
+        typeof scrapeSummary.discovered === "number"
+          ? scrapeSummary.discovered
+          : ok + failed + skipped;
       rows.push({
         id: "SCR-SUM",
-        message: `Scrape summary: ${scrapeSummary.ok} ok, ${scrapeSummary.failed} failed, ${words.toLocaleString()} words`,
-        status: scrapeSummary.failed > 0 ? "WARN" : "OK",
+        message: `Scrape summary: ${ok} ok, ${failed} failed, ${skipped} skipped, ${words.toLocaleString()} words, ${discovered} urls`,
+        status: failed > 0 ? "WARN" : "OK",
       });
     }
     scrapeErrors.forEach((err, idx) => {
