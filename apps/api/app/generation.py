@@ -44,6 +44,28 @@ def _build_syllabus_context(project_id: str, tag_weights: list[TagWeight]) -> st
         context_parts.append(f"[Source {idx}] {url}\n{text}")
     return "\n\n".join(context_parts)
 
+def _sources_context(project_id: str) -> str:
+    data = read_json(project_dir(project_id) / "sources.json", default={}) or {}
+    sources = data.get("sources") or []
+    if not sources:
+        return ""
+    lines = []
+    for idx, source in enumerate(sources, start=1):
+        if isinstance(source, dict):
+            url = source.get("url", "")
+            mode = source.get("mode") or source.get("discovery_mode") or ""
+            extra = f" ({mode})" if mode else ""
+        else:
+            url = str(source)
+            extra = ""
+        if not url:
+            continue
+        lines.append(f"[Source {idx}] {url}{extra}")
+    if not lines:
+        return ""
+    return "Sources list (no scraped content yet):\n" + "\n".join(lines)
+
+
 
 
 def _extract_json_block(text: str) -> str | None:
@@ -394,7 +416,9 @@ def _parse_json_output(text: str, schema, lecture_count: int | None = None) -> o
 def generate_tags(project_id: str, llm: LLMClient) -> TagsPayload:
     context = _sample_context(project_id)
     if not context.strip():
-        raise ValueError("No source content available to generate tags")
+        context = _sources_context(project_id)
+    if not context.strip():
+        raise ValueError("No source content available to generate tags. Save sources and run scrape to build the repo.")
     if llm.name == "mock" and not settings.allow_mock_fallback and not settings.test_mode:
         raise ValueError("LLM provider is mock; set OPENAI_API_KEY or llm_provider=openai")
     used_llm = llm
