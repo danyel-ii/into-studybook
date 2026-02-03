@@ -180,7 +180,10 @@ async def _run_scrape_job(job_id: str, project_id: str) -> None:
         project = _get_project(project_id)
         sources_json = read_json(project_dir(project_id) / "sources.json", default={"sources": []})
         sources = SourcesPayload.model_validate(sources_json).sources
-        await scrape_project(project_id, sources, project.allow_robots, progress_cb=progress)
+        stats = await scrape_project(project_id, sources, project.allow_robots, progress_cb=progress)
+        if stats.get("discovered", 0) == 0:
+            update_job(job_id, status=JobStatus.failed, message="No URLs discovered. Save sources and ensure they are reachable.")
+            return
         update_job(job_id, status=JobStatus.succeeded, progress=1.0, message="scrape complete")
     except Exception as exc:
         update_job(job_id, status=JobStatus.failed, message=str(exc))
@@ -215,9 +218,6 @@ async def build_repo(project_id: str) -> JobRead:
 async def scrape_summary(project_id: str) -> dict[str, Any]:
     _get_project(project_id)
     summary = read_json(project_dir(project_id) / "repo" / "scrape_summary.json")
-    if summary:
-        return summary
-    # Fallback: compute summary from pages.jsonl if present (serverless may lose summary file).
     pages = read_jsonl(project_dir(project_id) / "repo" / "pages.jsonl")
     if pages:
         ok = sum(1 for p in pages if p.get("status") == "ok")
@@ -232,7 +232,7 @@ async def scrape_summary(project_id: str) -> dict[str, Any]:
             if p.get("fetched_at"):
                 updated_at = p.get("fetched_at")
                 break
-        return {
+        computed = {
             "ok": ok,
             "skipped": skipped,
             "failed": failed,
@@ -240,6 +240,11 @@ async def scrape_summary(project_id: str) -> dict[str, Any]:
             "discovered": len(pages),
             "updated_at": updated_at,
         }
+        # If summary is missing or clearly empty, prefer computed stats.
+        if not summary or (summary.get("ok", 0) == 0 and summary.get("failed", 0) == 0):
+            return computed
+    if summary:
+        return summary
     return {"ok": 0, "skipped": 0, "failed": 0, "words": 0, "discovered": 0, "updated_at": ""}
 
 
