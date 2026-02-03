@@ -79,6 +79,7 @@ def _get_project(project_id: str) -> Project:
 
 @app.post("/projects", response_model=ProjectRead)
 async def create_project(payload: ProjectCreate) -> ProjectRead:
+    init_db()
     allow_robots = (
         payload.allow_robots
         if payload.allow_robots is not None

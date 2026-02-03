@@ -12,7 +12,12 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 
 
 def _default_projects_dir() -> Path:
-    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+    if (
+        os.getenv("VERCEL")
+        or os.getenv("VERCEL_ENV")
+        or os.getenv("VERCEL_URL")
+        or os.getenv("AWS_LAMBDA_FUNCTION_NAME")
+    ):
         return Path("/tmp/selfstudy/projects")
     return ROOT_DIR / "projects"
 
