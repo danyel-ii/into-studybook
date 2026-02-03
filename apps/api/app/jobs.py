@@ -3,15 +3,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Session, select
+from sqlmodel import select
 
-from .db import engine
+from .db import get_session
 from .models import Job, JobStatus, JobType
 
 
 def create_job(project_id: str, job_type: JobType, total_steps: int = 0) -> Job:
     job = Job(project_id=project_id, job_type=job_type, total_steps=total_steps)
-    with Session(engine) as session:
+    with get_session() as session:
         session.add(job)
         session.commit()
         session.refresh(job)
@@ -28,7 +28,7 @@ def update_job(
     message: Optional[str] = None,
     result_path: Optional[str] = None,
 ) -> Job:
-    with Session(engine) as session:
+    with get_session() as session:
         job = session.exec(select(Job).where(Job.id == job_id)).first()
         if not job:
             raise ValueError("Job not found")
@@ -52,5 +52,5 @@ def update_job(
 
 
 def get_job(job_id: str) -> Optional[Job]:
-    with Session(engine) as session:
+    with get_session() as session:
         return session.exec(select(Job).where(Job.id == job_id)).first()
