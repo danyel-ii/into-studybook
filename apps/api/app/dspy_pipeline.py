@@ -438,16 +438,9 @@ class DirectPipeline:
             "Return JSON matching the SyllabusPayload schema."
         )
         syllabus_context = (
-            f"Tags JSON:
-{tags_json}
-
-"
-            f"Tag weights JSON:
-{weights_json}
-
-"
-            f"Context:
-{context}"
+            f"Tags JSON:\n{tags_json}\n\n"
+            f"Tag weights JSON:\n{weights_json}\n\n"
+            f"Context:\n{context}"
         )
         syllabus = self.llm.complete_json(SyllabusPayload, prompt, syllabus_context)
         return PipelineResult(
@@ -465,8 +458,7 @@ class DirectPipeline:
             settings.lecture_chunk_parts = settings.test_lecture_chunk_parts
             settings.lecture_chunk_overhead_words = settings.test_lecture_chunk_overhead_words
 
-        prompt = f"{LECTURE_CRITERIA}
-{LECTURE_STRUCTURE}"
+        prompt = f"{LECTURE_CRITERIA}\n{LECTURE_STRUCTURE}"
         if settings.lecture_chunked_enabled:
             markdown = _generate_chunked_lecture(self.llm, lecture, context)
         else:
@@ -482,9 +474,7 @@ class DirectPipeline:
             length_note = _length_instruction(word_count)
             critique = " ".join(issues + ([length_note] if length_note else []))
             revise_prompt = (
-                f"{LECTURE_CRITERIA}
-{LECTURE_STRUCTURE}
-"
+                f"{LECTURE_CRITERIA}\n{LECTURE_STRUCTURE}\n"
                 f"Revise the lecture to fix: {critique}"
             )
             revised = _safe_complete_markdown(self.llm, revise_prompt, context)
@@ -498,8 +488,7 @@ class DirectPipeline:
         )
 
     def generate_essay(self, topic: str, context: str) -> PipelineResult:
-        prompt = f"{ESSAY_CRITERIA}
-Write the essay now."
+        prompt = f"{ESSAY_CRITERIA}\nWrite the essay now."
         markdown = _safe_complete_markdown(self.llm, prompt, context) or ""
         return PipelineResult(
             output=markdown,
@@ -812,7 +801,7 @@ class DSPyPipeline:
             settings.lecture_chunk_parts = settings.test_lecture_chunk_parts
             settings.lecture_chunk_overhead_words = settings.test_lecture_chunk_overhead_words
         lecture_spec_json = json.dumps(lecture, ensure_ascii=True)
-        prompt = f"{LECTURE_CRITERIA}\\n{LECTURE_STRUCTURE}"
+        prompt = f"{LECTURE_CRITERIA}\n{LECTURE_STRUCTURE}"
         if settings.lecture_chunked_enabled:
             markdown = _generate_chunked_lecture(self.llm, lecture, context)
         else:
@@ -911,7 +900,7 @@ class DSPyPipeline:
         )
 
     def generate_essay(self, topic: str, context: str) -> PipelineResult:
-        prompt = f"{ESSAY_CRITERIA}"
+        prompt = f"{ESSAY_CRITERIA}\nWrite the essay now."
         with self.dspy.context(lm=self.lm):
             markdown = self.essay_module(topic=topic, context=context, criteria=ESSAY_CRITERIA)
         return PipelineResult(
