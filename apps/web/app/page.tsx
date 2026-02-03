@@ -1111,7 +1111,7 @@ export default function Page() {
                   <input
                     className="form-input"
                     type="number"
-                    min={5}
+                    min={3}
                     max={60}
                     value={syllabusLectureCount}
                     onChange={(e) => setSyllabusLectureCount(Number(e.target.value))}
