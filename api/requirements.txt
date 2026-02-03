@@ -1,1 +1,11 @@
--r ../apps/api/requirements-prod.txt
+fastapi>=0.110
+sqlmodel>=0.0.16
+pydantic>=2.6
+pydantic-settings>=2.2
+httpx>=0.26
+beautifulsoup4>=4.12
+python-dotenv>=1.0
+python-multipart>=0.0.9
+aiofiles>=23.2
+rapidfuzz>=3.6
+openai>=1.12
