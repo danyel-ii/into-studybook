@@ -79,7 +79,7 @@ class Settings(BaseSettings):
 
 
 def _clean_openai_key(value: str) -> str:
-    cleaned = value.strip().strip(""").strip("'")
+    cleaned = value.strip().strip("\"").strip("'")
     if cleaned.lower().startswith("bearer "):
         cleaned = cleaned.split(" ", 1)[1].strip()
     return cleaned
