@@ -60,6 +60,7 @@ type ScrapeSummary = {
   skipped: number;
   failed: number;
   words: number;
+  discovered?: number;
   updated_at: string;
 };
 
@@ -760,7 +761,7 @@ export default function Page() {
       rows.push({ id: "SYS", message: "Idle. Ready for input.", status: "OK" });
     }
     return rows;
-  }, [job, scrapeSummary, scrapeErrors, pipelineError]);
+  }, [job, scrapeSummary, scrapeErrors, pipelineError, errorMessage, statusMessage]);
 
   const steps = [
     { id: 1, title: "Name Project", desc: "Create or select the project workspace for this run." },
