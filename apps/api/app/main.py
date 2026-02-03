@@ -270,6 +270,11 @@ async def get_repo_stats(project_id: str) -> RepoStats:
 @app.post("/projects/{project_id}/tags/generate", response_model=TagsPayload)
 async def generate_tags_endpoint(project_id: str, payload: TagsGenerateRequest) -> TagsPayload:
     _get_project(project_id)
+    if payload.sources:
+        atomic_write_json(
+            project_dir(project_id) / "sources.json",
+            {"sources": [source.model_dump(mode="json") for source in payload.sources]},
+        )
     llm = get_llm_client()
     try:
         return generate_tags(project_id, llm)

@@ -543,9 +543,15 @@ export default function Page() {
   const handleGenerateTags = async () => {
     if (!requireProject()) return;
     await runAction("Generating tags...", async () => {
+      const { valid } = validateSources(sourceText);
+      const sources = valid.map((url) => ({
+        url,
+        mode: sourceMode,
+        max_pages: sourceMaxPages,
+      }));
       const data = await apiFetch<{ tags: Tag[] }>(
         `/projects/${selectedProject}/tags/generate`,
-        { method: "POST", body: JSON.stringify({ sample_size: 20 }) },
+        { method: "POST", body: JSON.stringify({ sample_size: 20, sources }) },
         60000
       );
       setTags(data.tags);

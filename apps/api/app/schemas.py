@@ -68,6 +68,7 @@ class SyllabusGenerateRequest(BaseModel):
 
 class TagsGenerateRequest(BaseModel):
     sample_size: int = 20
+    sources: Optional[list[Source]] = None
 
 
 class EssayGenerateRequest(BaseModel):
