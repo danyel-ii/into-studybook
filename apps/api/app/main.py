@@ -181,8 +181,21 @@ async def _run_scrape_job(job_id: str, project_id: str) -> None:
         sources_json = read_json(project_dir(project_id) / "sources.json", default={"sources": []})
         sources = SourcesPayload.model_validate(sources_json).sources
         stats = await scrape_project(project_id, sources, project.allow_robots, progress_cb=progress)
-        if stats.get("discovered", 0) == 0:
-            update_job(job_id, status=JobStatus.failed, message="No URLs discovered. Save sources and ensure they are reachable.")
+        discovered = stats.get("discovered", 0)
+        processed = stats.get("ok", 0) + stats.get("failed", 0) + stats.get("skipped", 0)
+        if discovered == 0:
+            update_job(
+                job_id,
+                status=JobStatus.failed,
+                message="No URLs discovered. Save sources and ensure they are reachable.",
+            )
+            return
+        if processed == 0:
+            update_job(
+                job_id,
+                status=JobStatus.failed,
+                message="No pages were processed. Check robots.txt or source URL reachability.",
+            )
             return
         update_job(job_id, status=JobStatus.succeeded, progress=1.0, message="scrape complete")
     except Exception as exc:
@@ -241,7 +254,11 @@ async def scrape_summary(project_id: str) -> dict[str, Any]:
             "updated_at": updated_at,
         }
         # If summary is missing or clearly empty, prefer computed stats.
-        if not summary or (summary.get("ok", 0) == 0 and summary.get("failed", 0) == 0):
+        if not summary or (
+            summary.get("ok", 0) == 0
+            and summary.get("failed", 0) == 0
+            and summary.get("skipped", 0) == 0
+        ):
             return computed
     if summary:
         return summary
