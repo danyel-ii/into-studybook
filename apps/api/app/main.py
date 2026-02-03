@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from sqlmodel import Session, delete, select
 
 from .config import settings
-from .db import engine, init_db
+from .db import get_session, init_db
 from .generation import (
     _coerce_syllabus_payload,
     apply_weighted_focus,
@@ -70,7 +70,7 @@ async def health() -> dict[str, str]:
 
 
 def _get_project(project_id: str) -> Project:
-    with Session(engine) as session:
+    with get_session() as session:
         project = session.exec(select(Project).where(Project.id == project_id)).first()
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -87,7 +87,7 @@ async def create_project(payload: ProjectCreate) -> ProjectRead:
             else settings.allow_robots_default
         )
         project = Project(name=payload.name, allow_robots=allow_robots)
-        with Session(engine) as session:
+        with get_session() as session:
             session.add(project)
             session.commit()
             session.refresh(project)
@@ -109,7 +109,7 @@ async def create_project(payload: ProjectCreate) -> ProjectRead:
 
 @app.get("/projects", response_model=list[ProjectRead])
 async def list_projects() -> list[ProjectRead]:
-    with Session(engine) as session:
+    with get_session() as session:
         projects = session.exec(select(Project)).all()
     return [ProjectRead.model_validate(p) for p in projects]
 
@@ -117,7 +117,7 @@ async def list_projects() -> list[ProjectRead]:
 @app.delete("/projects/{project_id}")
 async def delete_project(project_id: str) -> dict[str, str]:
     project = _get_project(project_id)
-    with Session(engine) as session:
+    with get_session() as session:
         session.delete(project)
         session.commit()
     folder = project_dir(project_id)
@@ -128,7 +128,7 @@ async def delete_project(project_id: str) -> dict[str, str]:
 
 @app.delete("/projects")
 async def delete_all_projects() -> dict[str, str]:
-    with Session(engine) as session:
+    with get_session() as session:
         session.exec(delete(Project))
         session.commit()
     if settings.projects_dir.exists():
