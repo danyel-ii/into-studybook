@@ -93,8 +93,10 @@ class OpenAIClient(LLMClient):
             raise ValueError("OPENAI_API_KEY is required for OpenAIClient")
         from openai import OpenAI
         import httpx
+        import certifi
 
         timeout = httpx.Timeout(settings.openai_timeout_seconds, connect=10.0)
+        transport = httpx.HTTPTransport(retries=2)
         self.client = OpenAI(
             api_key=settings.openai_api_key,
             base_url="https://api.openai.com/v1",
@@ -102,6 +104,8 @@ class OpenAIClient(LLMClient):
                 timeout=timeout,
                 http2=False,
                 trust_env=False,
+                verify=certifi.where(),
+                transport=transport,
                 limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
             ),
         )
@@ -144,9 +148,12 @@ class OpenAIClient(LLMClient):
                 else:
                     break
         if last_exc:
-            raise RuntimeError(
-                f"OpenAI request failed: {type(last_exc).__name__}: {last_exc}"
-            ) from last_exc
+            cause = getattr(last_exc, "__cause__", None) or getattr(last_exc, "__context__", None)
+            detail = f"OpenAI request failed: {type(last_exc).__name__}: {last_exc}"
+            if cause:
+                detail += f" | cause: {type(cause).__name__}: {cause}"
+            print(detail)
+            raise RuntimeError(detail) from last_exc
         raise RuntimeError("OpenAI chat completion failed")
 
     def complete_json(self, schema: Type[BaseModel], prompt: str, context: str) -> BaseModel:

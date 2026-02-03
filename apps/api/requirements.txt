@@ -17,3 +17,4 @@ ruff>=0.4
 mypy>=1.8
 lxml>=5.1
 dspy-ai>=2.4.0
+certifi>=2024.2
