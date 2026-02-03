@@ -79,20 +79,32 @@ def _get_project(project_id: str) -> Project:
 
 @app.post("/projects", response_model=ProjectRead)
 async def create_project(payload: ProjectCreate) -> ProjectRead:
-    init_db()
-    allow_robots = (
-        payload.allow_robots
-        if payload.allow_robots is not None
-        else settings.allow_robots_default
-    )
-    project = Project(name=payload.name, allow_robots=allow_robots)
-    with Session(engine) as session:
-        session.add(project)
-        session.commit()
-        session.refresh(project)
-    ensure_project_dirs(project.id)
-    atomic_write_json(project_dir(project.id) / "sources.json", {"sources": []})
-    return ProjectRead.model_validate(project)
+    try:
+        init_db()
+        allow_robots = (
+            payload.allow_robots
+            if payload.allow_robots is not None
+            else settings.allow_robots_default
+        )
+        project = Project(name=payload.name, allow_robots=allow_robots)
+        with Session(engine) as session:
+            session.add(project)
+            session.commit()
+            session.refresh(project)
+        ensure_project_dirs(project.id)
+        atomic_write_json(project_dir(project.id) / "sources.json", {"sources": []})
+        return ProjectRead.model_validate(project)
+    except Exception as exc:  # noqa: BLE001
+        detail = f"{type(exc).__name__}: {exc}"
+        print(
+            "create_project failed",
+            {
+                "detail": detail,
+                "db_path": str(settings.db_path),
+                "projects_dir": str(settings.projects_dir),
+            },
+        )
+        raise HTTPException(status_code=500, detail=detail)
 
 
 @app.get("/projects", response_model=list[ProjectRead])
