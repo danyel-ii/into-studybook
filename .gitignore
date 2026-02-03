@@ -26,3 +26,5 @@ cache/
 
 # Logs
 *.log
+.vercel
+.env*.local
