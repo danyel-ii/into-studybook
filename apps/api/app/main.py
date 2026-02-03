@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import json
 import shutil
 import zipfile
@@ -72,9 +73,23 @@ async def health() -> dict[str, str]:
 def _get_project(project_id: str) -> Project:
     with get_session() as session:
         project = session.exec(select(Project).where(Project.id == project_id)).first()
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-        return project
+        if project:
+            return project
+        if os.getenv("VERCEL") or os.getenv("VERCEL_ENV") or str(settings.projects_dir).startswith("/tmp"):
+            project = Project(
+                id=project_id,
+                name=project_id,
+                allow_robots=settings.allow_robots_default,
+            )
+            session.add(project)
+            session.commit()
+            session.refresh(project)
+            ensure_project_dirs(project.id)
+            sources_path = project_dir(project.id) / "sources.json"
+            if not sources_path.exists():
+                atomic_write_json(sources_path, {"sources": []})
+            return project
+        raise HTTPException(status_code=404, detail="Project not found")
 
 
 @app.post("/projects", response_model=ProjectRead)
