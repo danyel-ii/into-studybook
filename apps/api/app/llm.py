@@ -92,8 +92,17 @@ class OpenAIClient(LLMClient):
         if not settings.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required for OpenAIClient")
         from openai import OpenAI
+        import httpx
 
-        self.client = OpenAI(api_key=settings.openai_api_key)
+        timeout = httpx.Timeout(settings.openai_timeout_seconds, connect=10.0)
+        self.client = OpenAI(
+            api_key=settings.openai_api_key,
+            http_client=httpx.Client(
+                timeout=timeout,
+                http2=False,
+                limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+            ),
+        )
 
     def _chat(self, prompt: str, context: str, response_format: dict | None = None) -> str:
         last_exc: Exception | None = None
@@ -132,7 +141,11 @@ class OpenAIClient(LLMClient):
                         short_context = "\n\n".join(parts[:2])
                 else:
                     break
-        raise last_exc or RuntimeError("OpenAI chat completion failed")
+        if last_exc:
+            raise RuntimeError(
+                f"OpenAI request failed: {type(last_exc).__name__}: {last_exc}"
+            ) from last_exc
+        raise RuntimeError("OpenAI chat completion failed")
 
     def complete_json(self, schema: Type[BaseModel], prompt: str, context: str) -> BaseModel:
         output = self._chat(prompt, context, response_format={"type": "json_object"})
