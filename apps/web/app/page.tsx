@@ -732,9 +732,11 @@ export default function Page() {
       });
     }
     if (scrapeSummary) {
+      const words =
+        typeof scrapeSummary.words === "number" ? scrapeSummary.words : 0;
       rows.push({
         id: "SCR-SUM",
-        message: `Scrape summary: ${scrapeSummary.ok} ok, ${scrapeSummary.failed} failed`,
+        message: `Scrape summary: ${scrapeSummary.ok} ok, ${scrapeSummary.failed} failed, ${words.toLocaleString()} words`,
         status: scrapeSummary.failed > 0 ? "WARN" : "OK",
       });
     }
