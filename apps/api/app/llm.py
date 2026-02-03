@@ -97,9 +97,11 @@ class OpenAIClient(LLMClient):
         timeout = httpx.Timeout(settings.openai_timeout_seconds, connect=10.0)
         self.client = OpenAI(
             api_key=settings.openai_api_key,
+            base_url="https://api.openai.com/v1",
             http_client=httpx.Client(
                 timeout=timeout,
                 http2=False,
+                trust_env=False,
                 limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
             ),
         )
