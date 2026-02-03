@@ -76,7 +76,18 @@ class Settings(BaseSettings):
         env_prefix = ""
 
 
+
+
+def _clean_openai_key(value: str) -> str:
+    cleaned = value.strip().strip(""").strip("'")
+    if cleaned.lower().startswith("bearer "):
+        cleaned = cleaned.split(" ", 1)[1].strip()
+    return cleaned
+
+
 settings = Settings()
+if settings.openai_api_key:
+    settings.openai_api_key = _clean_openai_key(settings.openai_api_key)
 
 if settings.db_path is None:
     settings.db_path = settings.projects_dir / "metadata.db"
