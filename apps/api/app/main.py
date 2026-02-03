@@ -215,9 +215,32 @@ async def build_repo(project_id: str) -> JobRead:
 async def scrape_summary(project_id: str) -> dict[str, Any]:
     _get_project(project_id)
     summary = read_json(project_dir(project_id) / "repo" / "scrape_summary.json")
-    if not summary:
-        return {"ok": 0, "skipped": 0, "failed": 0, "words": 0, "discovered": 0, "updated_at": ""}
-    return summary
+    if summary:
+        return summary
+    # Fallback: compute summary from pages.jsonl if present (serverless may lose summary file).
+    pages = read_jsonl(project_dir(project_id) / "repo" / "pages.jsonl")
+    if pages:
+        ok = sum(1 for p in pages if p.get("status") == "ok")
+        failed = sum(1 for p in pages if p.get("status") == "error")
+        skipped = sum(1 for p in pages if p.get("status") == "skipped")
+        words = 0
+        for p in pages:
+            if p.get("status") == "ok":
+                words += len((p.get("text") or "").split())
+        updated_at = ""
+        for p in reversed(pages):
+            if p.get("fetched_at"):
+                updated_at = p.get("fetched_at")
+                break
+        return {
+            "ok": ok,
+            "skipped": skipped,
+            "failed": failed,
+            "words": words,
+            "discovered": len(pages),
+            "updated_at": updated_at,
+        }
+    return {"ok": 0, "skipped": 0, "failed": 0, "words": 0, "discovered": 0, "updated_at": ""}
 
 
 @app.get("/projects/{project_id}/scrape/errors")
